@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Multi-Agent Pipeline</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 24px; background: #0f172a; color: #e2e8f0; }
+    h1 { color: #818cf8; font-size: 24px; margin-bottom: 6px; }
+    .subtitle { color: #64748b; font-size: 14px; margin-bottom: 24px; }
+    textarea { width: 100%; padding: 14px; font-size: 15px; border-radius: 10px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; resize: vertical; }
+    textarea:focus { outline: none; border-color: #4F46E5; }
+    .actions { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+    button { background: #4F46E5; color: white; padding: 11px 28px; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #4338CA; }
+    button:disabled { background: #334155; cursor: not-allowed; }
+    #timer { color: #64748b; font-size: 13px; }
+    #agents { display: flex; gap: 12px; margin-top: 24px; }
+    .agent { flex: 1; background: #1e293b; border-radius: 12px; padding: 14px; text-align: center; border: 2px solid #334155; transition: all 0.3s; }
+    .agent .icon { font-size: 24px; }
+    .agent .name { font-weight: bold; margin: 6px 0 3px; font-size: 13px; }
+    .agent .status { font-size: 11px; color: #64748b; }
+    .agent.running { border-color: #4F46E5; background: #1e1b4b; }
+    .agent.running .status { color: #818cf8; }
+    .agent.done { border-color: #10b981; background: #022c22; }
+    .agent.done .status { color: #10b981; }
+    #result-box { margin-top: 24px; background: #1e293b; border-radius: 12px; padding: 24px; display: none; border: 1px solid #334155; }
+    #result-box h2 { color: #818cf8; font-size: 16px; margin-bottom: 16px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+    #output { white-space: pre-wrap; font-size: 14px; line-height: 1.8; color: #cbd5e1; min-height: 40px; }
+    .cursor { display: inline-block; width: 2px; height: 16px; background: #818cf8; animation: blink 1s infinite; vertical-align: middle; margin-left: 2px; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; margin-bottom: 12px; }
+    .badge.ok { background: #022c22; color: #10b981; }
+    .badge.warn { background: #1c1917; color: #f59e0b; }
+  </style>
+</head>
+<body>
+  <h1>🤖 AI Multi-Agent Pipeline</h1>
+  <p class="subtitle">4 specialized AI agents collaborate in real time to answer your question.</p>
+
+  <textarea id="task" rows="3" placeholder="Ex: Analyze AI trends in 2025..."></textarea>
+
+  <div class="actions">
+    <button id="btn" onclick="runPipeline()">🚀 Run Pipeline</button>
+    <span id="timer"></span>
+  </div>
+
+  <div id="agents">
+    <div class="agent" id="agent-researcher">
+      <div class="icon">🔍</div>
+      <div class="name">Researcher</div>
+      <div class="status">Waiting</div>
+    </div>
+    <div class="agent" id="agent-analyst">
+      <div class="icon">📊</div>
+      <div class="name">Analyst</div>
+      <div class="status">Waiting</div>
+    </div>
+    <div class="agent" id="agent-writer">
+      <div class="icon">✍️</div>
+      <div class="name">Writer</div>
+      <div class="status">Waiting</div>
+    </div>
+    <div class="agent" id="agent-validator">
+      <div class="icon">✅</div>
+      <div class="name">Validator</div>
+      <div class="status">Waiting</div>
+    </div>
+  </div>
+
+  <div id="result-box">
+    <h2>📄 Final Result</h2>
+    <span id="badge" class="badge"></span>
+    <div id="output"><span class="cursor"></span></div>
+  </div>
+
+  <script>
+    let timerInterval, seconds = 0;
+
+    function setAgent(name, state, text) {
+      const el = document.getElementById("agent-" + name);
+      el.className = "agent " + state;
+      el.querySelector(".status").textContent = text;
+    }
+
+    function resetAgents() {
+      ["researcher","analyst","writer","validator"].forEach(a => setAgent(a, "", "Waiting"));
+    }
+
+    function startTimer() {
+      seconds = 0;
+      timerInterval = setInterval(() => {
+        seconds++;
+        document.getElementById("timer").textContent = "⏱ " + seconds + "s";
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+      document.getElementById("timer").textContent = "✅ Done in " + seconds + "s";
+    }
+
+    async function runPipeline() {
+      const task = document.getElementById("task").value.trim();
+      if (!task) { alert("Please enter a task!"); return; }
+
+      document.getElementById("btn").disabled = true;
+      document.getElementById("result-box").style.display = "none";
+      document.getElementById("output").innerHTML = '<span class="cursor"></span>';
+      resetAgents();
+      startTimer();
+
+      const res = await fetch("http://localhost:8000/run/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task })
+      });
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let outputText = "";
+      let resultShown = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const lines = decoder.decode(value).split("\n");
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const msg = JSON.parse(line.slice(6));
+
+            if (msg.type === "agent_start") {
+              setAgent(msg.agent, "running", "Running...");
+            }
+            if (msg.type === "agent_done") {
+              setAgent(msg.agent, "done", "Done ✓");
+            }
+            if (msg.type === "token") {
+              if (!resultShown) {
+                document.getElementById("result-box").style.display = "block";
+                document.getElementById("output").innerHTML = "";
+                resultShown = true;
+              }
+              outputText += msg.text;
+              document.getElementById("output").textContent = outputText;
+            }
+            if (msg.type === "done") {
+              stopTimer();
+              const badge = document.getElementById("badge");
+              badge.textContent = msg.status === "completed" ? "✅ Completed" : "⚠️ Completed";
+              badge.className = "badge " + (msg.status === "completed" ? "ok" : "warn");
+              ["researcher","analyst","writer","validator"].forEach(a => setAgent(a, "done", "Done ✓"));
+            }
+          } catch(e) {}
+        }
+      }
+
+      document.getElementById("btn").disabled = false;
+    }
+  </script>
+</body>
+</html>
