@@ -30,8 +30,9 @@ Entrée utilisateur
 ## Installation
 
 ```bash
-# Cloner / copier le dossier
-cd multi_agent_pipeline
+# Cloner le dépôt
+git clone https://github.com/feudson97-a11y/multi-agent-pipeline.git
+cd multi-agent-pipeline
 
 # Installer les dépendances (Python 3.11+)
 pip install -r requirements.txt
@@ -64,7 +65,7 @@ python main.py --interactive
 ## Structure du projet
 
 ```
-multi_agent_pipeline/
+multi-agent-pipeline/
 ├── main.py              # Point d'entrée CLI
 ├── config.py            # Configuration centralisée
 ├── orchestrator.py      # Planification + dispatch
