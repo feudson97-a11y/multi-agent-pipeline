@@ -150,4 +150,4 @@ Puis dans `memory.py`, remplacer `DictMemory` par une implémentation Redis avec
 
 ## Modèle utilisé
 
-`claude-sonnet-4-20250514` — modifiable dans `config.py` → `AgentConfig.model`
+`claude-haiku-4-5-20251001` — modifiable dans `config.py` → `AgentConfig.model`
