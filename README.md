@@ -1,89 +1,89 @@
-# Pipeline Multi-Agents — Python + Claude
+# Multi-Agent Pipeline — Python + Claude
 
-Pipeline d'automatisation agentique avec 4 agents spécialisés qui collaborent pour accomplir des tâches complexes.
+An agentic automation pipeline in which 4 specialized agents collaborate to complete complex tasks.
 
 ## Architecture
 
 ```
-Entrée utilisateur
+User input
        │
        ▼
-  Orchestrateur  ──── planifie et dispatche ────►  Mémoire partagée
+  Orchestrator  ──── plans and dispatches ────►  Shared memory
        │                                                  ▲
-       ├──► Researcher  (web search, collecte)            │
-       ├──► Analyst     (analyse, calculs)                │  tous les agents
-       ├──► Writer      (rédaction, formatage)            │  lisent/écrivent
-       └──► Validator   (QA, retry si besoin)             │
+       ├──► Researcher  (web search, data gathering)      │
+       ├──► Analyst     (analysis, calculations)          │  all agents
+       ├──► Writer      (writing, formatting)             │  read/write
+       └──► Validator   (QA, retry if needed)             │
                                                           │
-       Bus d'événements (asyncio) ─────────────────────────
+       Event bus (asyncio) ────────────────────────────────
 ```
 
 ## Agents
 
-| Agent | Rôle | Outils |
+| Agent | Role | Tools |
 |---|---|---|
-| **Researcher** | Recherche web, collecte d'informations | `web_search` (Anthropic natif) |
-| **Analyst** | Analyse, raisonnement, calculs | `execute_python` (sandbox) |
-| **Writer** | Rédaction, formatage du document final | — |
-| **Validator** | Contrôle qualité, décision retry | — |
+| **Researcher** | Web search, information gathering | `web_search` (native Anthropic tool) |
+| **Analyst** | Analysis, reasoning, calculations | `execute_python` (sandbox) |
+| **Writer** | Writing and formatting the final document | — |
+| **Validator** | Quality control, retry decision | — |
 
 ## Installation
 
 ```bash
-# Cloner le dépôt
+# Clone the repository
 git clone https://github.com/feudson97-a11y/multi-agent-pipeline.git
 cd multi-agent-pipeline
 
-# Installer les dépendances (Python 3.11+)
+# Install dependencies (Python 3.11+)
 pip install -r requirements.txt
 
-# Configurer la clé API
+# Set your API key
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-## Utilisation
+## Usage
 
 ```bash
-# Tâche simple
-python main.py "Analyse les tendances du marché de l'IA en 2025"
+# Simple task
+python main.py "Analyze AI market trends in 2025"
 
-# Avec format de sortie et sauvegarde
-python main.py "Rapport Python vs Go pour le backend" --format report --save
+# With output format and saving
+python main.py "Python vs Go report for backend development" --format report --save
 
-# Mode interactif
+# Interactive mode
 python main.py --interactive
 ```
 
-## Formats de sortie
+## Output formats
 
-- `markdown` — document Markdown (défaut)
-- `report` — rapport structuré avec sections
-- `json` — données structurées JSON
-- `plain_text` — texte brut
-- `html` — page HTML
+- `markdown` — Markdown document (default)
+- `report` — structured report with sections
+- `json` — structured JSON data
+- `plain_text` — plain text
+- `html` — HTML page
 
-## Structure du projet
+## Project structure
 
 ```
 multi-agent-pipeline/
-├── main.py              # Point d'entrée CLI
-├── config.py            # Configuration centralisée
-├── orchestrator.py      # Planification + dispatch
-├── memory.py            # État partagé entre agents
-├── event_bus.py         # Coordination asynchrone
+├── main.py              # CLI entry point
+├── config.py            # Centralized configuration
+├── orchestrator.py      # Planning + dispatch
+├── memory.py            # State shared between agents
+├── event_bus.py         # Asynchronous coordination
 ├── requirements.txt
 └── agents/
     ├── __init__.py
-    ├── base_agent.py    # Classe abstraite commune
-    ├── researcher.py    # Recherche web
-    ├── analyst.py       # Analyse + exec Python
-    ├── writer.py        # Génération de contenu
-    └── validator.py     # Contrôle qualité
+    ├── base_agent.py    # Shared abstract base class
+    ├── researcher.py    # Web research
+    ├── analyst.py       # Analysis + Python execution
+    ├── writer.py        # Content generation
+    └── validator.py     # Quality control
 ```
 
-## Personnalisation
+## Customization
 
-### Ajouter un agent
+### Add an agent
 
 ```python
 # agents/my_agent.py
@@ -93,7 +93,7 @@ class MyAgent(BaseAgent):
     def __init__(self):
         super().__init__(
             agent_id="my_agent",
-            system_prompt="Tu es un expert en..."
+            system_prompt="You are an expert in..."
         )
     
     async def run(self, task: AgentTask) -> dict:
@@ -103,20 +103,20 @@ class MyAgent(BaseAgent):
 ```
 
 ```python
-# Dans orchestrator.py, ajouter à self._agents:
+# In orchestrator.py, add it to self._agents:
 self._agents["my_agent"] = MyAgent()
 ```
 
-### Ajouter un outil
+### Add a tool
 
 ```python
 MY_TOOL = {
     "name": "my_tool",
-    "description": "Fait quelque chose d'utile",
+    "description": "Does something useful",
     "input_schema": {
         "type": "object",
         "properties": {
-            "query": {"type": "string", "description": "La requête"}
+            "query": {"type": "string", "description": "The query"}
         },
         "required": ["query"]
     }
@@ -129,25 +129,25 @@ class MyAgent(BaseAgent):
     
     async def _execute_tool(self, tool_name: str, tool_input: dict):
         if tool_name == "my_tool":
-            # logique ici
-            return "résultat"
+            # your logic here
+            return "result"
 ```
 
-### Passer en Redis (production)
+### Switch to Redis (production)
 
 ```python
 # config.py
 memory = MemoryConfig(backend="redis", redis_url="redis://localhost:6379/0")
 ```
 
-Puis dans `memory.py`, remplacer `DictMemory` par une implémentation Redis avec `aioredis`.
+Then, in `memory.py`, replace `DictMemory` with a Redis implementation using `aioredis`.
 
-## Variables d'environnement
+## Environment variables
 
-| Variable | Requis | Défaut | Description |
+| Variable | Required | Default | Description |
 |---|---|---|---|
-| `ANTHROPIC_API_KEY` | ✅ | — | Clé API Anthropic |
+| `ANTHROPIC_API_KEY` | ✅ | — | Anthropic API key |
 
-## Modèle utilisé
+## Model
 
-`claude-haiku-4-5-20251001` — modifiable dans `config.py` → `AgentConfig.model`
+`claude-haiku-4-5-20251001` — configurable in `config.py` → `AgentConfig.model`
